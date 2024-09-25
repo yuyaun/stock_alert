@@ -3,6 +3,16 @@ from datetime import datetime
 import time
 from notification import send_line_notify
 
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
+name = os.getenv("STOCK_NAME")
+ticker = os.getenv("STOCK_TICKER")
+
+start_time = 1
+end_time = 24
+
 # 設置一個字典來追蹤每個漲跌幅的通知狀態
 notified = {
     0.5: False,
@@ -19,7 +29,8 @@ notified = {
 
 # 抓取台灣加權指數資料 (台股指數的代碼 "^TWII")
 def get_twii_data():
-    twii = yf.Ticker("^TWII")
+    global ticker
+    twii = yf.Ticker(ticker)
     data = twii.history(period="5d")
     return data
 
@@ -34,7 +45,7 @@ def calculate_price_change(data):
 
 # 檢查漲跌幅並通知
 def check_price_change(price_change, current_index):
-    global notified
+    global notified, name
     if price_change is None:
         print("無法獲取資料")
         return
@@ -46,23 +57,22 @@ def check_price_change(price_change, current_index):
     for threshold in [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]:
         if abs(price_change) >= threshold and not notified[threshold]:
             if price_change > 0:
-                msg = f"{current_time} 台灣加權指數 {current_index:.2f} 漲幅達到 {price_change:.2f}%，門檻：{threshold}% (數據有15分鐘延遲)"
+                msg = f"{name} {current_index:.2f} 漲幅達到 {price_change:.2f}%，門檻：{threshold}% (數據有15分鐘延遲)"
                 print(f"通知: {msg}")
                 send_line_notify(msg)
             else:
-                msg = f"{current_time} 台灣加權指數 {current_index:.2f} 跌幅達到 {price_change:.2f}%，門檻：{threshold}% (數據有15分鐘延遲)"
+                msg = f"{name} {current_index:.2f} 跌幅達到 {price_change:.2f}%，門檻：{threshold}% (數據有15分鐘延遲)"
                 print(f"通知: {msg}")
                 send_line_notify(msg)
             notified[threshold] = True  # 設定該門檻為已通知
-    print(f"檢查時間: {current_time} 台灣加權指數: {current_index:.2f}, 漲跌幅: {price_change:.2f}%")
+    print(f"檢查時間: {current_time} {name}: {current_index:.2f}, 漲跌幅: {price_change:.2f}%")
 
 def main():
-    global notified
+    global notified, start_time, end_time
     # 每分鐘檢查一次
     while True:
         now = datetime.now()
-        # 每天早上9點至下午1點之間執行檢查 (假設為台股交易時間)
-        if now.hour >= 9 and now.hour < 14:
+        if now.hour >= start_time and now.hour < end_time:
             data = get_twii_data()
             price_change, current_index = calculate_price_change(data)
             check_price_change(price_change, current_index)

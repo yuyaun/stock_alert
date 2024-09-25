@@ -25,5 +25,5 @@ COPY --from=builder /usr/local /usr/local
 
 # 拷貝整個應用程序到容器中
 COPY . .
-CMD ["/bin/sh", "-c", "python twii_alert.py"]
+CMD ["python", "twii_alert.py"]
 
