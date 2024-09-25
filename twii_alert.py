@@ -20,15 +20,15 @@ notified = {
 # 抓取台灣加權指數資料 (台股指數的代碼 "^TWII")
 def get_twii_data():
     twii = yf.Ticker("^TWII")
-    data = twii.history(period="1d")
+    data = twii.history(period="5d")
     return data
 
 # 計算漲跌幅百分比
 def calculate_price_change(data):
-    if len(data) == 0:
+    if len(data) < 2:
         return None, None
-    open_price = data['Open'].iloc[0]  # 使用 iloc[0] 表示第一個位置
-    close_price = data['Close'].iloc[0]  # 使用 iloc[0] 表示第一個位置
+    open_price = data['Close'].iloc[-2]  # 上一個交易日的收盤價
+    close_price = data['Close'].iloc[-1]  # 當前的收盤價
     price_change = ((close_price - open_price) / open_price) * 100
     return price_change, close_price
 
@@ -46,11 +46,11 @@ def check_price_change(price_change, current_index):
     for threshold in [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]:
         if abs(price_change) >= threshold and not notified[threshold]:
             if price_change > 0:
-                msg = f"{current_time} 台灣加權指數 {current_index:.2f} 漲幅達到 {price_change:.2f}%，門檻：{threshold}%"
+                msg = f"{current_time} 台灣加權指數 {current_index:.2f} 漲幅達到 {price_change:.2f}%，門檻：{threshold}% (數據有15分鐘延遲)"
                 print(f"通知: {msg}")
                 send_line_notify(msg)
             else:
-                msg = f"{current_time} 台灣加權指數 {current_index:.2f} 跌幅達到 {price_change:.2f}%，門檻：{threshold}%"
+                msg = f"{current_time} 台灣加權指數 {current_index:.2f} 跌幅達到 {price_change:.2f}%，門檻：{threshold}% (數據有15分鐘延遲)"
                 print(f"通知: {msg}")
                 send_line_notify(msg)
             notified[threshold] = True  # 設定該門檻為已通知
